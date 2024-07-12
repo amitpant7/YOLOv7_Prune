@@ -270,6 +270,76 @@ def train(hyp, opt, device, tb_writer=None):
     scheduler = lr_scheduler.LambdaLR(optimizer, lr_lambda=lf)
     # plot_lr_scheduler(optimizer, scheduler, epochs)
 
+    # Image sizes
+    gs = max(int(model.stride.max()), 32)  # grid size (max stride)
+    nl = model.model[-1].nl  # number of detection layers (used for scaling hyp['obj'])
+
+    imgsz, imgsz_test = [
+        check_img_size(x, gs) for x in opt.img_size
+    ]  # verify imgsz are gs-multiples
+
+    # Trainloader
+    dataloader, dataset = create_dataloader(
+        train_path,
+        imgsz,
+        batch_size,
+        gs,
+        opt,
+        hyp=hyp,
+        augment=True,
+        cache=opt.cache_images,
+        rect=opt.rect,
+        rank=rank,
+        world_size=opt.world_size,
+        workers=opt.workers,
+        image_weights=opt.image_weights,
+        quad=opt.quad,
+        prefix=colorstr("train: "),
+    )
+    mlc = np.concatenate(dataset.labels, 0)[:, 0].max()  # max label class
+    nb = len(dataloader)  # number of batches
+    assert (
+        mlc < nc
+    ), "Label class %g exceeds nc=%g in %s. Possible class labels are 0-%g" % (
+        mlc,
+        nc,
+        opt.data,
+        nc - 1,
+    )
+
+    # Process 0
+    if rank in [-1, 0]:
+        testloader = create_dataloader(
+            test_path,
+            imgsz_test,
+            batch_size * 2,
+            gs,
+            opt,  # testloader
+            hyp=hyp,
+            cache=opt.cache_images and not opt.notest,
+            rect=True,
+            rank=-1,
+            world_size=opt.world_size,
+            workers=opt.workers,
+            pad=0.5,
+            prefix=colorstr("val: "),
+        )[0]
+
+        if not opt.resume:
+            labels = np.concatenate(dataset.labels, 0)
+            c = torch.tensor(labels[:, 0])  # classes
+            # cf = torch.bincount(c.long(), minlength=nc) + 1.  # frequency
+            # model._initialize_biases(cf.to(device))
+            if plots:
+                # plot_labels(labels, names, save_dir, loggers)
+                if tb_writer:
+                    tb_writer.add_histogram("classes", c, 0)
+
+            # Anchors
+            if not opt.noautoanchor:
+                check_anchors(dataset, model=model, thr=hyp["anchor_t"], imgsz=imgsz)
+            model.half().float()  # pre-reduce anchor precision
+
     ##start model pruning##
     import torch_pruning as tp
 
@@ -372,15 +442,6 @@ def train(hyp, opt, device, tb_writer=None):
             except:
                 print("nockpt, moving....")
 
-        # Image sizes
-        gs = max(int(model.stride.max()), 32)  # grid size (max stride)
-        nl = model.model[
-            -1
-        ].nl  # number of detection layers (used for scaling hyp['obj'])
-        imgsz, imgsz_test = [
-            check_img_size(x, gs) for x in opt.img_size
-        ]  # verify imgsz are gs-multiples
-
         # DP mode
         if cuda and rank == -1 and torch.cuda.device_count() > 1:
             model = torch.nn.DataParallel(model)
@@ -389,70 +450,6 @@ def train(hyp, opt, device, tb_writer=None):
         if opt.sync_bn and cuda and rank != -1:
             model = torch.nn.SyncBatchNorm.convert_sync_batchnorm(model).to(device)
             logger.info("Using SyncBatchNorm()")
-
-        # Trainloader
-        dataloader, dataset = create_dataloader(
-            train_path,
-            imgsz,
-            batch_size,
-            gs,
-            opt,
-            hyp=hyp,
-            augment=True,
-            cache=opt.cache_images,
-            rect=opt.rect,
-            rank=rank,
-            world_size=opt.world_size,
-            workers=opt.workers,
-            image_weights=opt.image_weights,
-            quad=opt.quad,
-            prefix=colorstr("train: "),
-        )
-        mlc = np.concatenate(dataset.labels, 0)[:, 0].max()  # max label class
-        nb = len(dataloader)  # number of batches
-        assert (
-            mlc < nc
-        ), "Label class %g exceeds nc=%g in %s. Possible class labels are 0-%g" % (
-            mlc,
-            nc,
-            opt.data,
-            nc - 1,
-        )
-
-        # Process 0
-        if rank in [-1, 0]:
-            testloader = create_dataloader(
-                test_path,
-                imgsz_test,
-                batch_size * 2,
-                gs,
-                opt,  # testloader
-                hyp=hyp,
-                cache=opt.cache_images and not opt.notest,
-                rect=True,
-                rank=-1,
-                world_size=opt.world_size,
-                workers=opt.workers,
-                pad=0.5,
-                prefix=colorstr("val: "),
-            )[0]
-
-            if not opt.resume:
-                labels = np.concatenate(dataset.labels, 0)
-                c = torch.tensor(labels[:, 0])  # classes
-                # cf = torch.bincount(c.long(), minlength=nc) + 1.  # frequency
-                # model._initialize_biases(cf.to(device))
-                if plots:
-                    # plot_labels(labels, names, save_dir, loggers)
-                    if tb_writer:
-                        tb_writer.add_histogram("classes", c, 0)
-
-                # Anchors
-                if not opt.noautoanchor:
-                    check_anchors(
-                        dataset, model=model, thr=hyp["anchor_t"], imgsz=imgsz
-                    )
-                model.half().float()  # pre-reduce anchor precision
 
         # DDP mode
         if cuda and rank != -1:
