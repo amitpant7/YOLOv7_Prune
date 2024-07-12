@@ -555,7 +555,7 @@ def train(hyp, opt, device, tb_writer=None):
                 )
             )
             if rank in [-1, 0]:
-                pbar = tqdm(pbar, total=nb)  # progress bar
+                pbar = tqdm(pbar, total=nb, position=0, leave=True)  # progress bar
             optimizer.zero_grad()
             for i, (
                 imgs,
