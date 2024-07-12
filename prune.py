@@ -340,6 +340,40 @@ def train(hyp, opt, device, tb_writer=None):
                 check_anchors(dataset, model=model, thr=hyp["anchor_t"], imgsz=imgsz)
             model.half().float()  # pre-reduce anchor precision
 
+    # DP mode
+    if cuda and rank == -1 and torch.cuda.device_count() > 1:
+        model = torch.nn.DataParallel(model)
+
+    # SyncBatchNorm
+    if opt.sync_bn and cuda and rank != -1:
+        model = torch.nn.SyncBatchNorm.convert_sync_batchnorm(model).to(device)
+        logger.info("Using SyncBatchNorm()")
+
+    # DDP mode
+    if cuda and rank != -1:
+        model = DDP(
+            model,
+            device_ids=[opt.local_rank],
+            output_device=opt.local_rank,
+            # nn.MultiheadAttention incompatibility with DDP https://github.com/pytorch/pytorch/issues/26698
+            find_unused_parameters=any(
+                isinstance(layer, nn.MultiheadAttention) for layer in model.modules()
+            ),
+        )
+
+    # Model parameters
+    hyp["box"] *= 3.0 / nl  # scale to layers
+    hyp["cls"] *= nc / 80.0 * 3.0 / nl  # scale to classes and layers
+    hyp["obj"] *= (imgsz / 640) ** 2 * 3.0 / nl  # scale to image size and layers
+    hyp["label_smoothing"] = opt.label_smoothing
+    model.nc = nc  # attach number of classes to model
+    model.hyp = hyp  # attach hyperparameters to model
+    model.gr = 1.0  # iou loss ratio (obj_loss = 1.0 or iou)
+    model.class_weights = (
+        labels_to_class_weights(dataset.labels, nc).to(device) * nc
+    )  # attach class weights
+    model.names = names
+
     ##start model pruning##
     import torch_pruning as tp
 
@@ -442,41 +476,6 @@ def train(hyp, opt, device, tb_writer=None):
             except:
                 pass
 
-        # DP mode
-        if cuda and rank == -1 and torch.cuda.device_count() > 1:
-            model = torch.nn.DataParallel(model)
-
-        # SyncBatchNorm
-        if opt.sync_bn and cuda and rank != -1:
-            model = torch.nn.SyncBatchNorm.convert_sync_batchnorm(model).to(device)
-            logger.info("Using SyncBatchNorm()")
-
-        # DDP mode
-        if cuda and rank != -1:
-            model = DDP(
-                model,
-                device_ids=[opt.local_rank],
-                output_device=opt.local_rank,
-                # nn.MultiheadAttention incompatibility with DDP https://github.com/pytorch/pytorch/issues/26698
-                find_unused_parameters=any(
-                    isinstance(layer, nn.MultiheadAttention)
-                    for layer in model.modules()
-                ),
-            )
-
-        # Model parameters
-        hyp["box"] *= 3.0 / nl  # scale to layers
-        hyp["cls"] *= nc / 80.0 * 3.0 / nl  # scale to classes and layers
-        hyp["obj"] *= (imgsz / 640) ** 2 * 3.0 / nl  # scale to image size and layers
-        hyp["label_smoothing"] = opt.label_smoothing
-        model.nc = nc  # attach number of classes to model
-        model.hyp = hyp  # attach hyperparameters to model
-        model.gr = 1.0  # iou loss ratio (obj_loss = 1.0 or iou)
-        model.class_weights = (
-            labels_to_class_weights(dataset.labels, nc).to(device) * nc
-        )  # attach class weights
-        model.names = names
-
         # Start training
         t0 = time.time()
         nw = max(
@@ -503,6 +502,7 @@ def train(hyp, opt, device, tb_writer=None):
             f"Logging results to {save_dir}\n"
             f"Starting training for {epochs} epochs..."
         )
+
         torch.save(model, wdir / "init.pt")
         for epoch in range(
             start_epoch, epochs
