@@ -876,7 +876,7 @@ if __name__ == "__main__":
         "--weights", type=str, default="yolo7.pt", help="initial weights path"
     )
     parser.add_argument("--prune_ratio", type=str, default=0.1, help="prune_percentage")
-    parser.add_argument("--steps", type=int, default=1, help="steps"
+    parser.add_argument("--steps", type=int, default=1, help="steps")
                         
     parser.add_argument("--cfg", type=str, default="", help="model.yaml path")
     parser.add_argument(
