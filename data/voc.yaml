@@ -1,6 +1,6 @@
 # voc.yaml
-train: /kaggle/input/pascal-voc-2012-dataset/VOC2012_train_val/VOC2012_train_val/train.txt
-val: /kaggle/input/pascal-voc-2012-dataset/VOC2012_train_val/VOC2012_train_val/val.txt
+train: /kaggle/working/train/images
+val: /kaggle/working/val/images
 
 nc: 20
 names: ["aeroplane", "bicycle", "bird", "boat", "bottle", "bus", "car", "cat", "chair", "cow", "diningtable",
