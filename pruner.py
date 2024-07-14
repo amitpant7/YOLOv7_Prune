@@ -442,7 +442,11 @@ def train(hyp, opt, device, tb_writer=None):
 
     #########################pruning loop startsss###################33
     for i in range(steps):
+
+        base_macs, base_nparams = tp.utils.count_ops_and_params(model, example_inputs)
+
         pruner.step()
+
         print(f"Iteration   {i+1} / {steps}---------------------------")
         macs, nparams = tp.utils.count_ops_and_params(model, example_inputs)
         print(
@@ -456,7 +460,7 @@ def train(hyp, opt, device, tb_writer=None):
 
         print("=" * 16)
         # evaluate_model(model)
-        ret_epoch = 3 + i
+        ret_epoch = opt.epochs + i
         print(f"\n----------- Retraining for {ret_epoch} epochs-------------")
         epochs = ret_epoch
         start_epoch = 0
