@@ -777,7 +777,7 @@ def train(hyp, opt, device, tb_writer=None):
 
                     torch.save(
                         ckpt,
-                        f"{prune_save_dir}/yolo_prune_last_{int(ratio*100/(i+1))}.pt",
+                        f"{prune_save_dir}/yolo_prune_{int(ratio*100*(i+1)/steps)}%.pt",
                     )
 
                     torch.save(ckpt, last)
