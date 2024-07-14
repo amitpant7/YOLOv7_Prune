@@ -374,6 +374,8 @@ def train(hyp, opt, device, tb_writer=None):
     )  # attach class weights
     model.names = names
 
+    ema = ModelEMA(model) if rank in [-1, 0] else None
+
     if pretrained:
         # Optimizer
         if ckpt["optimizer"] is not None:
