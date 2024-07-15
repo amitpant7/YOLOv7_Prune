@@ -411,12 +411,17 @@ def train(hyp, opt, device, tb_writer=None):
     if not os.path.exists(prune_save_dir):
         os.makedirs(prune_save_dir)
 
-    ignored_layers = [
-        model.model[0],
-        model.model[1],
-        model.model[2],
-        model.model[-1],
-    ]
+    ignored_layers = []
+    from models.yolo import Detect, IDetect
+    from models.common import ImplicitA, ImplicitM
+    for m in model.modules():
+        if isinstance(m, (Detect,IDetect)):
+            ignored_layers.append(m.m)
+    unwrapped_parameters = []
+    for m in model.modules():
+        if isinstance(m, (ImplicitA,ImplicitM)):
+            unwrapped_parameters.append((m.implicit,1)) # pruning 1st dimension of implicit matrix
+
 
     example_inputs = torch.randn(1, 3, 416, 416).to(device)
     imp = tp.importance.LAMPImportance()
