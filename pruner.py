@@ -424,7 +424,8 @@ def train(hyp, opt, device, tb_writer=None):
 
 
     example_inputs = torch.randn(1, 3, 416, 416).to(device)
-    imp = tp.importance.LAMPImportance()
+    # imp = tp.importance.LAMPImportance()
+    imp = tp.importance.MagnitudeImportance(p=2)
 
     ratio = float(opt.prune_ratio)  # need to make it passable parameter
     steps = int(opt.steps)
