@@ -520,7 +520,6 @@ def train(hyp, opt, device, tb_writer=None):
 
         epochs = ret_epoch
 
-
         for epoch in range(
             start_epoch, epochs
         ):  # epoch ------------------------------------------------------------------
@@ -791,10 +790,11 @@ def train(hyp, opt, device, tb_writer=None):
                     }
 
                     # Save last, best and delete
+                    name = int(ratio * 100 * (i + 1) / steps)
 
                     torch.save(
                         ckpt,
-                        f"{prune_save_dir}/yolo_prune_{int(ratio*100*(i+1)/steps)}%.pt",
+                        f"{prune_save_dir}/yolo_prune_{name}.pt",
                     )
 
                     torch.save(ckpt, last)

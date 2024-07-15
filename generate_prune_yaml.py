@@ -1,3 +1,4 @@
+# saves model yaml to directory and returns yaml dictionary too.
 import torch
 import yaml
 from collections import OrderedDict
@@ -69,29 +70,16 @@ def custom_yaml_dump(data, stream=None, **kwargs):
     return yaml.dump(data, stream, OrderedDumper, **kwargs)
 
 
-def main(pruned_model_path, original_yaml_path, output_yaml_path):
+def get_model_yaml(pruned_model_path, original_yaml_path, output_yaml_path):
     model = load_pruned_model(pruned_model_path)
     channels = trace_model_channels(model)
 
     with open(original_yaml_path, "r") as file:
         original_yaml = yaml.safe_load(file)
-
     updated_yaml = update_yaml_channels(original_yaml, channels)
-
-    # Convert 'backbone' and 'head' sections to multi-line format
-    for section in ["backbone", "head"]:
-        updated_yaml[section] = "\n".join(map(str, updated_yaml[section]))
 
     with open(output_yaml_path, "w") as file:
         custom_yaml_dump(updated_yaml, file, default_flow_style=False, sort_keys=False)
 
     print(f"Updated YAML file saved to {output_yaml_path}")
-
-
-pruned_model_path = "/kaggle/working/YOLOv7_Prune/prune/yolo_prune_5500%.pt"
-original_yaml_path = "/kaggle/working/YOLOv7_Prune/cfg/training/yolov7.yaml"
-output_yaml_path = "/kaggle/working/pruned_yolov7.yaml"
-main(pruned_model_path, original_yaml_path, output_yaml_path)
-
-
-# need to make the some changes after the yaml, make adjustments according the original yaml.
+    return updated_yaml
