@@ -790,6 +790,7 @@ def train(hyp, opt, device, tb_writer=None):
                     }
 
                     # Save last, best and delete
+                    print(ratio)
                     name = int(ratio * 100 * (i + 1) / steps)
 
                     torch.save(
