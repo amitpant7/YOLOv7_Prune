@@ -158,7 +158,7 @@ def train(hyp, opt, device, tb_writer=None):
     test_path = data_dict["val"]
 
     #################### need to add pruner here
-    
+
     ##start model pruning##
     import torch_pruning as tp
 
@@ -230,7 +230,6 @@ def train(hyp, opt, device, tb_writer=None):
         # evaluate_model(model)
         ret_epoch = opt.epochs + i
         print(f"\n----------- Retraining for {ret_epoch} epochs-------------")
-    
 
         # Freeze
         freeze = [
@@ -385,7 +384,9 @@ def train(hyp, opt, device, tb_writer=None):
 
         # Image sizes
         gs = max(int(model.stride.max()), 32)  # grid size (max stride)
-        nl = model.model[-1].nl  # number of detection layers (used for scaling hyp['obj'])
+        nl = model.model[
+            -1
+        ].nl  # number of detection layers (used for scaling hyp['obj'])
         imgsz, imgsz_test = [
             check_img_size(x, gs) for x in opt.img_size
         ]  # verify imgsz are gs-multiples
@@ -458,7 +459,9 @@ def train(hyp, opt, device, tb_writer=None):
 
                 # Anchors
                 if not opt.noautoanchor:
-                    check_anchors(dataset, model=model, thr=hyp["anchor_t"], imgsz=imgsz)
+                    check_anchors(
+                        dataset, model=model, thr=hyp["anchor_t"], imgsz=imgsz
+                    )
                 model.half().float()  # pre-reduce anchor precision
 
         # DDP mode
@@ -469,15 +472,17 @@ def train(hyp, opt, device, tb_writer=None):
                 output_device=opt.local_rank,
                 # nn.MultiheadAttention incompatibility with DDP https://github.com/pytorch/pytorch/issues/26698
                 find_unused_parameters=any(
-                    isinstance(layer, nn.MultiheadAttention) for layer in model.modules()
+                    isinstance(layer, nn.MultiheadAttention)
+                    for layer in model.modules()
                 ),
             )
-
 
             # Model parameters
             hyp["box"] *= 3.0 / nl  # scale to layers
             hyp["cls"] *= nc / 80.0 * 3.0 / nl  # scale to classes and layers
-            hyp["obj"] *= (imgsz / 640) ** 2 * 3.0 / nl  # scale to image size and layers
+            hyp["obj"] *= (
+                (imgsz / 640) ** 2 * 3.0 / nl
+            )  # scale to image size and layers
             hyp["label_smoothing"] = opt.label_smoothing
             model.nc = nc  # attach number of classes to model
             model.hyp = hyp  # attach hyperparameters to model
@@ -515,8 +520,9 @@ def train(hyp, opt, device, tb_writer=None):
             )
             torch.save(model, wdir / "init.pt")
 
-            
             epochs = ret_epoch
+
+            print("The epochs: ", start_epohs, epochs)
             for epoch in range(
                 start_epoch, epochs
             ):  # epoch ------------------------------------------------------------------
@@ -782,7 +788,9 @@ def train(hyp, opt, device, tb_writer=None):
                             "updates": ema.updates,
                             "optimizer": optimizer.state_dict(),
                             "wandb_id": (
-                                wandb_logger.wandb_run.id if wandb_logger.wandb else None
+                                wandb_logger.wandb_run.id
+                                if wandb_logger.wandb
+                                else None
                             ),
                         }
 
