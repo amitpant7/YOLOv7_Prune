@@ -156,8 +156,7 @@ def train(hyp, opt, device, tb_writer=None):
         check_dataset(data_dict)  # check
     train_path = data_dict["train"]
     test_path = data_dict["val"]
-    
-    
+
     ####################
 
     # Freeze
@@ -417,14 +416,16 @@ def train(hyp, opt, device, tb_writer=None):
     ignored_layers = []
     from models.yolo import Detect, IDetect
     from models.common import ImplicitA, ImplicitM
+
     for m in model.modules():
-        if isinstance(m, (Detect,IDetect)):
+        if isinstance(m, (Detect, IDetect)):
             ignored_layers.append(m.m)
     unwrapped_parameters = []
     for m in model.modules():
-        if isinstance(m, (ImplicitA,ImplicitM)):
-            unwrapped_parameters.append((m.implicit,1)) # pruning 1st dimension of implicit matrix
-
+        if isinstance(m, (ImplicitA, ImplicitM)):
+            unwrapped_parameters.append(
+                (m.implicit, 1)
+            )  # pruning 1st dimension of implicit matrix
 
     example_inputs = torch.randn(1, 3, 416, 416).to(device)
     # imp = tp.importance.LAMPImportance()
@@ -447,6 +448,7 @@ def train(hyp, opt, device, tb_writer=None):
         iterative_steps=steps,  # the number of iterations to achieve target sparsity
         pruning_ratio=ratio,
         ignored_layers=ignored_layers,
+        unwrapped_parameters=unwrapped_parameters,
     )
 
     #########################pruning loop startsss###################33
