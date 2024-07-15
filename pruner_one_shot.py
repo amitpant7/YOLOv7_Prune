@@ -790,13 +790,13 @@ def train(hyp, opt, device, tb_writer=None):
                     }
 
                     # Save last, best and delete
-                    print(ratio)
-                    name = int(ratio * 100 * (i + 1) / steps)
+                    # print(ratio)
+                    # name = int(ratio * 100)
 
-                    torch.save(
-                        ckpt,
-                        f"{prune_save_dir}/yolo_prune_{name}.pt",
-                    )
+                    # torch.save(
+                    #     ckpt,
+                    #     f"{prune_save_dir}/yolo_prune_{name}.pt",
+                    # )
 
                     torch.save(ckpt, last)
                     if best_fitness == fi:
