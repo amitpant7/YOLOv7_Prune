@@ -520,7 +520,6 @@ def train(hyp, opt, device, tb_writer=None):
 
         epochs = ret_epoch
 
-        print("The epochs: ", start_epohs, epochs)
 
         for epoch in range(
             start_epoch, epochs
