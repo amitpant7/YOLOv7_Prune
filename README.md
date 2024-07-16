@@ -9,3 +9,7 @@ Run pruning:
 
 Prune ratio defines percentage of model channels to prune.
 Steps define iterative steps to prune the model.
+
+The iterative pruning (using pruner.py) is not performing due to some issues in prorper retraining instead pruner_one_shot can be used to prune the model and, retrain it for few epochs. 
+
+The pruned models yaml need to be updated using `generate_prune_yaml.py`, this yaml can be used for further retraining the pruned model or pruning it to higher ratio achieving iterative pruning.
